@@ -23,3 +23,7 @@ test/
 # Local environment
 .env
 .env.local
+
+# Internal documentation
+project.md
+claude.md
