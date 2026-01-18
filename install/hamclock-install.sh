@@ -159,6 +159,58 @@ fi
 msg_ok "Created and Started HamClock Service"
 
 #=============================================================================
+# OPTIONAL: Nginx Reverse Proxy Configuration
+#=============================================================================
+# Install nginx to allow access via http://container-ip/ instead of http://container-ip:8081/live.html
+if [ "${INSTALL_NGINX:-true}" = "true" ]; then
+  msg_info "Installing Nginx Reverse Proxy"
+
+  # Install nginx
+  $STD apt-get install -y nginx
+
+  # Create nginx configuration
+  cat > /etc/nginx/sites-available/hamclock << 'NGINX_EOF'
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+
+    # Redirect root to live.html
+    location = / {
+        return 301 http://$host/live.html;
+    }
+
+    # Proxy all other requests to HamClock
+    location / {
+        proxy_pass http://127.0.0.1:8081;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+NGINX_EOF
+
+  # Enable site
+  rm -f /etc/nginx/sites-enabled/default
+  ln -sf /etc/nginx/sites-available/hamclock /etc/nginx/sites-enabled/hamclock
+
+  # Test and reload nginx
+  if nginx -t >/dev/null 2>&1; then
+    $STD systemctl reload nginx
+    msg_ok "Installed and Configured Nginx (access via http://$CONTAINER_IP/)"
+  else
+    msg_error "Nginx configuration test failed"
+    exit 1
+  fi
+else
+  msg_info "Skipping Nginx installation (set INSTALL_NGINX=true to enable)"
+fi
+
+#=============================================================================
 # PHASE 8: Version Tracking
 #=============================================================================
 msg_info "Creating Version Information"
@@ -166,8 +218,8 @@ msg_info "Creating Version Information"
 # Get container IP
 CONTAINER_IP=$(hostname -I | awk '{print $1}')
 
-cat > /opt/hamclock_version.txt << EOF
-HamClock Installation Information
+# Build version info with conditional nginx section
+VERSION_INFO="HamClock Installation Information
 ==================================
 Installation Date: $(date)
 Resolution: $RESOLUTION
@@ -175,21 +227,44 @@ Build Target: $BUILD_TARGET
 Binary Location: /usr/local/bin/hamclock
 Configuration: /root/.hamclock
 
-Web Interface URLs:
+Web Interface URLs:"
+
+if [ "${INSTALL_NGINX:-true}" = "true" ]; then
+  VERSION_INFO="$VERSION_INFO
+  Primary:     http://$CONTAINER_IP/ (nginx proxy)
+  Full Access: http://$CONTAINER_IP:8081/live.html (direct)
+  Read-Only:   http://$CONTAINER_IP:8082/live.html (direct)"
+else
+  VERSION_INFO="$VERSION_INFO
   Full Access: http://$CONTAINER_IP:8081/live.html
-  Read-Only:   http://$CONTAINER_IP:8082/live.html
+  Read-Only:   http://$CONTAINER_IP:8082/live.html"
+fi
+
+VERSION_INFO="$VERSION_INFO
 
 Service Management:
-  Status:  systemctl status hamclock
-  Start:   systemctl start hamclock
-  Stop:    systemctl stop hamclock
-  Restart: systemctl restart hamclock
-  Logs:    journalctl -u hamclock -f
+  HamClock:
+    Status:  systemctl status hamclock
+    Start:   systemctl start hamclock
+    Stop:    systemctl stop hamclock
+    Restart: systemctl restart hamclock
+    Logs:    journalctl -u hamclock -f"
+
+if [ "${INSTALL_NGINX:-true}" = "true" ]; then
+  VERSION_INFO="$VERSION_INFO
+  Nginx:
+    Status:  systemctl status nginx
+    Reload:  systemctl reload nginx
+    Config:  /etc/nginx/sites-available/hamclock"
+fi
+
+VERSION_INFO="$VERSION_INFO
 
 Documentation:
   HamClock Site: https://www.clearskyinstitute.com/ham/HamClock/
-  Source Code:   https://www.clearskyinstitute.com/ham/HamClock/ESPHamClock.tgz
-EOF
+  Source Code:   https://www.clearskyinstitute.com/ham/HamClock/ESPHamClock.tgz"
+
+echo "$VERSION_INFO" > /opt/hamclock_version.txt
 
 msg_ok "Created Version Information at /opt/hamclock_version.txt"
 
@@ -213,6 +288,11 @@ msg_info "HamClock Installation Complete!"
 echo ""
 cat /opt/hamclock_version.txt
 echo ""
-msg_ok "Access HamClock at: http://$CONTAINER_IP:8081/live.html"
+
+if [ "${INSTALL_NGINX:-true}" = "true" ]; then
+  msg_ok "Access HamClock at: http://$CONTAINER_IP/"
+else
+  msg_ok "Access HamClock at: http://$CONTAINER_IP:8081/live.html"
+fi
 
 cleanup_lxc
