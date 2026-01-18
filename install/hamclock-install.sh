@@ -45,8 +45,12 @@ RESOLUTIONS=(
   "3200x1920" "Extra Large (4K displays)"
 )
 
-# Use whiptail for interactive selection if available
-if command -v whiptail &> /dev/null; then
+# Check if resolution is pre-set via environment variable
+if [ -n "$HAMCLOCK_RESOLUTION" ]; then
+  RESOLUTION="$HAMCLOCK_RESOLUTION"
+  msg_info "Using pre-set resolution from environment: $RESOLUTION"
+# Use whiptail for interactive selection if available and in interactive mode
+elif command -v whiptail &> /dev/null && [ -t 0 ]; then
   RESOLUTION=$(whiptail --title "HamClock Resolution" --menu \
     "Choose display resolution for HamClock web interface:" 16 60 4 \
     "${RESOLUTIONS[@]}" \
@@ -57,9 +61,9 @@ if command -v whiptail &> /dev/null; then
     RESOLUTION="1600x960"
   fi
 else
-  # Fallback to environment variable or default
-  RESOLUTION="${HAMCLOCK_RESOLUTION:-1600x960}"
-  msg_info "Whiptail not available, using resolution: $RESOLUTION"
+  # Fallback to default if non-interactive or whiptail unavailable
+  RESOLUTION="1600x960"
+  msg_info "Non-interactive mode or whiptail unavailable, using default resolution: $RESOLUTION"
 fi
 
 BUILD_TARGET="hamclock-web-${RESOLUTION}"
