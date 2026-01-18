@@ -1,371 +1,206 @@
-# HamClock Proxmox LXC Helper Script
+# HamClock LXC
 
-Automated installation script for HamClock (ham radio information display) on Proxmox VE LXC containers.
+<div align="center">
+  <img src="https://img.shields.io/badge/Proxmox-VE-orange?style=flat-square" alt="Proxmox VE">
+  <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License">
+</div>
 
-## What is HamClock?
-
-HamClock is a comprehensive ham radio information display created by Elwood Downey (WB0OEW). It provides real-time information including:
-
-- World map with day/night terminator and gray line
-- Solar indices (SFI, SSN, Kp, A-index)
-- Band conditions and propagation predictions
-- DXCC prefix lookup and beam headings
-- Satellite tracking and passes
-- Space weather alerts and warnings
-
-**Official Website**: https://www.clearskyinstitute.com/ham/HamClock/
+Ham radio information display system by WB0OEW for Proxmox VE LXC containers.
 
 ## Features
 
-- **One-Command Installation**: Automated setup following community-scripts patterns
-- **Interactive Resolution Selection**: Choose from 4 display resolutions during installation
-- **Web-Based Interface**: Access from any device on your network
-- **Nginx Reverse Proxy** (optional): Simple URL access at `http://container-ip/` instead of `:8081/live.html`
-- **LXC Optimized**: Uses web-only builds for minimal resource usage
-- **Automatic Startup**: Systemd service with auto-restart on failure
-- **Comprehensive Documentation**: Built-in version tracking and usage information
-
-## Requirements
-
-### Proxmox Host
-- Proxmox VE 7.0 or newer
-- Network connectivity for LXC container
-
-### LXC Container
-- **OS**: Debian 12 (Bookworm) or Ubuntu 20.04+
-- **RAM**: 1GB minimum (2GB recommended for compilation)
-- **CPU**: 2 cores recommended
-- **Storage**: 4GB minimum
-- **Network**: Internet access during installation
+- 🌍 Real-time world map with day/night terminator
+- ☀️ Solar indices and space weather
+- 📡 Band conditions and propagation
+- 🛰️ Satellite tracking
+- 🎯 DX cluster integration
+- 🌐 Web-based interface
 
 ## Quick Start
 
-### 1. Create LXC Container
-
-In Proxmox VE:
+Run this command on your Proxmox host shell:
 
 ```bash
-pct create 100 local:vztmpl/debian-12-standard_12.0-1_amd64.tar.zst \
-  --hostname hamclock \
-  --memory 1024 \
-  --cores 2 \
-  --rootfs local-lvm:4 \
-  --net0 name=eth0,bridge=vmbr0,ip=dhcp \
-  --unprivileged 1 \
-  --start 1
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/GM5DNA/proxmox-hamclock-lxc/main/create.sh)"
 ```
 
-Or use the Proxmox web UI to create a Debian 12 or Ubuntu 20.04+ container.
+The script will:
+1. Ask for container configuration (VMID, resolution, networking)
+2. Create and configure the LXC container
+3. Install HamClock with optional nginx reverse proxy
+4. Display access URL
 
-### 2. Access Container
+**Installation time**: 5-10 minutes (includes compilation)
 
-```bash
-pct enter 100
-```
+## Access
 
-Or SSH into the container after obtaining its IP address.
+After installation:
 
-### 3. Run Installation Script
-
-```bash
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/GM5DNA/proxmox-hamclock-lxc/main/install/hamclock-install.sh)"
-```
-
-### 4. Select Resolution
-
-During installation, you'll be prompted to choose a display resolution:
-
-| Resolution | Recommended For |
-|------------|----------------|
-| **800x480** | Small displays, 7" touchscreens |
-| **1600x960** | General use (recommended default) |
-| **2400x1440** | Large displays, 27"+ monitors |
-| **3200x1920** | 4K displays, presentation systems |
-
-Use arrow keys to select and press Enter.
-
-### 5. Access HamClock
-
-After installation completes, access the web interface:
-
-**With Nginx (default)**:
+**With nginx** (default):
 ```
 http://<container-ip>/
 ```
 
-**Direct access** (without nginx or on specific ports):
+**Direct access**:
 ```
 http://<container-ip>:8081/live.html  (full access)
 http://<container-ip>:8082/live.html  (read-only)
 ```
 
-Replace `<container-ip>` with your container's IP address (shown at end of installation).
-
-## Post-Installation
-
-### Initial Setup
+## Initial Setup
 
 On first access, HamClock will guide you through:
+- Station location (lat/long or callsign)
+- Map center selection
+- Display preferences
+- DX cluster connection (optional)
 
-1. **Station Location**: Enter your latitude/longitude or callsign
-2. **Map Center**: Choose where to center the world map
-3. **Display Preferences**: Configure colors and layout
-4. **DX Cluster**: Optionally connect to DX spotting network
-5. **Additional Features**: Configure satellite tracking, alerts, etc.
+## Requirements
 
-### Web Interface Ports
+**Proxmox Host**:
+- Proxmox VE 7.0+
 
-- **Port 8081**: Full access (view and configure)
-- **Port 8082**: Read-only access (display only)
+**Container Resources**:
+- RAM: 512MB minimum (1GB recommended)
+- CPU: 1 core minimum (2 cores recommended)
+- Storage: 4GB
 
-### Service Management
+## Resolution Options
 
-```bash
-# Check service status
-systemctl status hamclock
+| Resolution | Display Size |
+|------------|--------------|
+| 800x480    | Small (7" touchscreens) |
+| 1600x960   | **Recommended** - General use |
+| 2400x1440  | Large displays (27"+) |
+| 3200x1920  | Extra large (4K displays) |
 
-# Restart service
-systemctl restart hamclock
+## Configuration
 
-# View logs
-journalctl -u hamclock -f
-
-# Stop service
-systemctl stop hamclock
-
-# Start service
-systemctl start hamclock
-```
-
-### Configuration Files
-
-- **Binary**: `/usr/local/bin/hamclock`
-- **Configuration**: `/root/.hamclock/`
-- **Service**: `/etc/systemd/system/hamclock.service`
-- **Version Info**: `/opt/hamclock_version.txt`
+The installation script will prompt for:
+- **VMID**: Container ID (auto-suggested)
+- **Hostname**: Container name (default: hamclock)
+- **Resolution**: Display resolution (default: 1600x960)
+- **Nginx**: Reverse proxy for simplified URL (default: yes)
+- **Network**: DHCP or static IP configuration
+- **Resources**: RAM, CPU, storage (defaults provided)
 
 ## Advanced Usage
 
-### Non-Interactive Installation
+### Environment Variables
 
-Pre-set the resolution using an environment variable:
+Pre-configure settings by setting environment variables before running the script:
 
 ```bash
-export HAMCLOCK_RESOLUTION="1600x960"
+export HAMCLOCK_RESOLUTION="800x480"
+export INSTALL_NGINX="false"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/GM5DNA/proxmox-hamclock-lxc/main/create.sh)"
+```
+
+### Manual Installation
+
+For manual control, download the installation script:
+
+```bash
+wget https://raw.githubusercontent.com/GM5DNA/proxmox-hamclock-lxc/main/install/hamclock-install.sh
+chmod +x hamclock-install.sh
 ./hamclock-install.sh
 ```
 
-This is useful for automated deployments.
-
-### Nginx Configuration
-
-By default, the installation includes nginx as a reverse proxy for simplified access. You can control this behavior:
-
-**Install without nginx**:
-```bash
-export INSTALL_NGINX=false
-./hamclock-install.sh
-```
-
-**What nginx provides**:
-- Access HamClock at `http://container-ip/` instead of `http://container-ip:8081/live.html`
-- Automatic redirect from root path to `/live.html`
-- Standard HTTP port (80) access
-- All HamClock features still accessible on ports 8081/8082
-
-**Nginx configuration location**: `/etc/nginx/sites-available/hamclock`
-
-### Changing Resolution
-
-Resolution cannot be changed from the web interface. To change it:
-
-1. Stop the service: `systemctl stop hamclock`
-2. Download source: `curl -fsSL -o /tmp/ESPHamClock.tgz https://www.clearskyinstitute.com/ham/HamClock/ESPHamClock.tgz`
-3. Extract: `cd /tmp && tar -xzf ESPHamClock.tgz && cd ESPHamClock`
-4. Compile new resolution: `make -j $(nproc) hamclock-web-<resolution>`
-5. Install: `make install`
-6. Update version file: Edit `/opt/hamclock_version.txt`
-7. Restart: `systemctl restart hamclock`
-
-### Firewall Configuration
-
-If using Proxmox firewall or external firewall, allow these ports:
+## Management
 
 ```bash
-# UFW
-ufw allow 8081/tcp
-ufw allow 8082/tcp
+# Start container
+pct start <vmid>
 
-# iptables
-iptables -A INPUT -p tcp --dport 8081 -j ACCEPT
-iptables -A INPUT -p tcp --dport 8082 -j ACCEPT
-```
+# Stop container
+pct stop <vmid>
 
-### Adding Authentication
+# Access container console
+pct enter <vmid>
 
-HamClock has no built-in authentication. For secure external access, use a reverse proxy:
+# View HamClock logs
+pct exec <vmid> -- journalctl -u hamclock -f
 
-**Nginx Example**:
-```nginx
-server {
-    listen 80;
-    server_name hamclock.example.com;
-
-    location / {
-        auth_basic "HamClock";
-        auth_basic_user_file /etc/nginx/.htpasswd;
-        proxy_pass http://localhost:8081;
-    }
-}
+# Restart HamClock service
+pct exec <vmid> -- systemctl restart hamclock
 ```
 
 ## Troubleshooting
 
-### Service Won't Start
-
+**Container won't start**:
 ```bash
-# Check service status
-systemctl status hamclock
-
-# View detailed logs
-journalctl -u hamclock -n 50
-
-# Common causes:
-# - Ports 8081/8082 already in use
-# - Network not available
-# - Binary missing or corrupted
+pct start <vmid>
+journalctl -xe
 ```
 
-### Web Interface Not Accessible
-
+**HamClock not accessible**:
 ```bash
-# Verify service is running
-systemctl is-active hamclock
-
-# Check if ports are listening
-ss -tlnp | grep 8081
-
-# Test locally first
-curl -I http://localhost:8081/live.html
-
-# If local works, check firewall
-iptables -L -n | grep 8081
+pct exec <vmid> -- systemctl status hamclock
+pct exec <vmid> -- ss -tlnp | grep 8081
 ```
 
-### Compilation Fails
-
+**Check installation details**:
 ```bash
-# Check available memory
-free -h
-
-# If low, increase container memory (from Proxmox host):
-pct set <vmid> -memory 2048
-
-# Check disk space
-df -h
-
-# Verify dependencies installed
-apt-get install --reinstall make g++ libx11-dev linux-libc-dev libssl-dev
+pct exec <vmid> -- cat /opt/hamclock_version.txt
 ```
 
-### Display Issues
+## Updating HamClock
 
-If the web interface loads but displays incorrectly:
-
-1. Clear browser cache
-2. Try different browser
-3. Check resolution matches your display capabilities
-4. Verify JavaScript is enabled
-
-## Uninstallation
-
-To completely remove HamClock:
+To update to a newer HamClock version:
 
 ```bash
-# Stop and disable service
-systemctl stop hamclock
-systemctl disable hamclock
-
-# Remove files
-rm -f /usr/local/bin/hamclock
-rm -rf /root/.hamclock
-rm -f /etc/systemd/system/hamclock.service
-rm -f /opt/hamclock_version.txt
-
-# Reload systemd
-systemctl daemon-reload
-
-# Optional: Remove dependencies
-apt-get autoremove -y make g++ libx11-dev linux-libc-dev libssl-dev
+pct enter <vmid>
+cd /tmp
+curl -fsSL -o ESPHamClock.tgz https://www.clearskyinstitute.com/ham/HamClock/ESPHamClock.tgz
+tar -xzf ESPHamClock.tgz
+cd ESPHamClock
+make hamclock-web-<resolution>  # Use your current resolution
+make install
+systemctl restart hamclock
 ```
 
-## Project Information
+## Uninstall
 
-### Author
-**GM5DNA**
+To completely remove the container:
 
-### Repository
-https://github.com/GM5DNA/proxmox-hamclock-lxc
+```bash
+pct stop <vmid>
+pct destroy <vmid>
+```
 
-### License
-MIT License - See LICENSE file for details
+## What is HamClock?
 
-### Contributing
+HamClock is a comprehensive ham radio information display created by Elwood Downey (WB0OEW). It provides:
 
-Contributions are welcome! Please:
+- Real-time propagation information
+- Solar and geomagnetic data
+- World map with gray line
+- DX cluster spots
+- Satellite tracking and predictions
+- Band conditions
+- Space weather alerts
 
+**Official website**: https://www.clearskyinstitute.com/ham/HamClock/
+
+## Credits
+
+- **HamClock**: Created by Elwood Downey (WB0OEW)
+- **Installation Script**: GM5DNA
+- **License**: MIT
+
+## Support
+
+- **Issues**: https://github.com/GM5DNA/proxmox-hamclock-lxc/issues
+- **HamClock Documentation**: https://www.clearskyinstitute.com/ham/HamClock/
+
+## Contributing
+
+Contributions welcome! Please:
 1. Fork the repository
 2. Create a feature branch
-3. Test your changes in a clean LXC container
-4. Update documentation as needed
-5. Submit a pull request
-
-### Issues
-
-Report bugs or request features at:
-https://github.com/GM5DNA/proxmox-hamclock-lxc/issues
-
-## Additional Documentation
-
-- **project.md**: Comprehensive project documentation, architecture decisions, and development guide
-- **claude.md**: AI assistant context and development patterns
-- **examples/hamclock.service**: Reference systemd service file
-
-## Resources
-
-### HamClock
-- **Homepage**: https://www.clearskyinstitute.com/ham/HamClock/
-- **Documentation**: https://www.clearskyinstitute.com/ham/HamClock/
-- **Source Code**: https://www.clearskyinstitute.com/ham/HamClock/ESPHamClock.tgz
-
-### Proxmox
-- **Proxmox VE Documentation**: https://pve.proxmox.com/pve-docs/
-- **LXC Containers**: https://pve.proxmox.com/wiki/Linux_Container
-- **Community Scripts**: https://github.com/community-scripts/ProxmoxVE
-
-### Ham Radio
-- **ARRL**: https://www.arrl.org/
-- **QRZ**: https://www.qrz.com/
-- **DX Maps**: https://www.dxmaps.com/
-
-## Acknowledgments
-
-- **Elwood Downey (WB0OEW)**: Creator of HamClock
-- **Community Scripts Team**: Patterns and conventions reference
-- **Proxmox Community**: LXC container expertise
-
-## Version History
-
-### Version 1.0 (2026-01-18)
-- Initial release
-- Support for 4 resolution options
-- Debian 12 and Ubuntu 20.04+ support
-- Systemd service with auto-restart
-- Web interface on ports 8081/8082
-- Comprehensive documentation
+3. Test in a clean Proxmox environment
+4. Submit a pull request
 
 ---
 
-**73 and happy DXing!**
-
-*This script is not officially affiliated with HamClock or Clear Sky Institute. It's a community contribution to make HamClock easier to deploy on Proxmox VE.*
+**73 de GM5DNA**
