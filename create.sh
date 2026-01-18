@@ -151,6 +151,11 @@ build_container() {
     pct status $VMID | grep -q "running" || msg_error "Container failed to start"
     msg_ok "Container started"
 
+    # Set root password
+    msg_info "Setting root password"
+    echo "root:hamclock" | pct exec $VMID -- chpasswd
+    msg_ok "Root password set to 'hamclock'"
+
     # Wait for container to be fully ready
     msg_info "Waiting for container initialization"
     sleep 10
@@ -187,6 +192,10 @@ description() {
     echo -e "  Hostname:   ${YW}$HOSTNAME${CL}"
     echo -e "  IP Address: ${YW}$CONTAINER_IP${CL}"
     echo -e "  Resolution: ${YW}$RESOLUTION${CL}"
+    echo ""
+    echo -e "  Console Login:"
+    echo -e "    Username:  ${YW}root${CL}"
+    echo -e "    Password:  ${YW}hamclock${CL}"
     echo ""
 
     if [[ "$INSTALL_NGINX" == "true" ]]; then
