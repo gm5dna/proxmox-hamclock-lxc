@@ -65,6 +65,7 @@ echo ""
 if [ -z "$VMID" ]; then
     suggested_vmid=$(get_next_vmid)
     read -p "Enter container ID (VMID) [$suggested_vmid]: " input_vmid
+    input_vmid=$(echo "$input_vmid" | xargs)  # Strip whitespace
     VMID=${input_vmid:-$suggested_vmid}
 fi
 
@@ -75,6 +76,7 @@ fi
 
 # Get hostname
 read -p "Enter hostname [$HOSTNAME]: " input_hostname
+input_hostname=$(echo "$input_hostname" | xargs)  # Strip whitespace
 HOSTNAME=${input_hostname:-$HOSTNAME}
 
 # Get resolution
@@ -105,8 +107,18 @@ use_dhcp=${use_dhcp:-Y}
 if [[ ! "$use_dhcp" =~ ^[Yy]$ ]]; then
     NETWORK_TYPE="static"
     read -p "Enter static IP address (e.g., 192.168.1.10/24): " STATIC_IP
+    STATIC_IP=$(echo "$STATIC_IP" | xargs)  # Strip whitespace
+
+    # Validate CIDR notation
+    if [[ ! "$STATIC_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$ ]]; then
+        msg_error "Invalid IP format. Must include CIDR notation (e.g., 192.168.1.10/24)"
+    fi
+
     read -p "Enter gateway (e.g., 192.168.1.1): " GATEWAY
+    GATEWAY=$(echo "$GATEWAY" | xargs)  # Strip whitespace
+
     read -p "Enter VLAN tag (leave empty for none): " VLAN
+    VLAN=$(echo "$VLAN" | xargs)  # Strip whitespace
 fi
 
 # Advanced options
@@ -114,12 +126,15 @@ echo ""
 read -p "Customize resources? (y/N) [N]: " customize_resources
 if [[ "$customize_resources" =~ ^[Yy]$ ]]; then
     read -p "Memory (MB) [$MEMORY]: " input_memory
+    input_memory=$(echo "$input_memory" | xargs)  # Strip whitespace
     MEMORY=${input_memory:-$MEMORY}
 
     read -p "CPU cores [$CORES]: " input_cores
+    input_cores=$(echo "$input_cores" | xargs)  # Strip whitespace
     CORES=${input_cores:-$CORES}
 
     read -p "Storage (GB) [$STORAGE]: " input_storage
+    input_storage=$(echo "$input_storage" | xargs)  # Strip whitespace
     STORAGE=${input_storage:-$STORAGE}
 fi
 
