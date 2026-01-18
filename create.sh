@@ -114,6 +114,32 @@ variables() {
     else
         NET_CONFIG="name=eth0,bridge=$var_bridge,ip=dhcp"
     fi
+
+    # Root password
+    echo ""
+    read -p "Set root password for console access? (Y/n) [Y]: " SET_PASSWORD
+    SET_PASSWORD=$(echo "${SET_PASSWORD:-Y}" | xargs)
+
+    if [[ "$SET_PASSWORD" =~ ^[Yy]$ ]]; then
+        while true; do
+            read -sp "Enter root password: " ROOT_PASSWORD
+            echo ""
+            read -sp "Confirm password: " ROOT_PASSWORD_CONFIRM
+            echo ""
+
+            if [[ "$ROOT_PASSWORD" == "$ROOT_PASSWORD_CONFIRM" ]]; then
+                if [[ -z "$ROOT_PASSWORD" ]]; then
+                    echo "Password cannot be empty. Please try again."
+                    continue
+                fi
+                break
+            else
+                echo "Passwords do not match. Please try again."
+            fi
+        done
+    else
+        ROOT_PASSWORD=""
+    fi
 }
 
 # Build container
@@ -151,10 +177,12 @@ build_container() {
     pct status $VMID | grep -q "running" || msg_error "Container failed to start"
     msg_ok "Container started"
 
-    # Set root password
-    msg_info "Setting root password"
-    echo "root:hamclock" | pct exec $VMID -- chpasswd
-    msg_ok "Root password set to 'hamclock'"
+    # Set root password if configured
+    if [[ -n "$ROOT_PASSWORD" ]]; then
+        msg_info "Setting root password"
+        echo "root:$ROOT_PASSWORD" | pct exec $VMID -- chpasswd
+        msg_ok "Root password configured"
+    fi
 
     # Wait for container to be fully ready
     msg_info "Waiting for container initialization"
@@ -193,10 +221,13 @@ description() {
     echo -e "  IP Address: ${YW}$CONTAINER_IP${CL}"
     echo -e "  Resolution: ${YW}$RESOLUTION${CL}"
     echo ""
-    echo -e "  Console Login:"
-    echo -e "    Username:  ${YW}root${CL}"
-    echo -e "    Password:  ${YW}hamclock${CL}"
-    echo ""
+
+    if [[ -n "$ROOT_PASSWORD" ]]; then
+        echo -e "  Console Login:"
+        echo -e "    Username:  ${YW}root${CL}"
+        echo -e "    Password:  ${YW}(as configured)${CL}"
+        echo ""
+    fi
 
     if [[ "$INSTALL_NGINX" == "true" ]]; then
         echo -e "  Access:     ${BL}http://$CONTAINER_IP/${CL}"
