@@ -151,8 +151,11 @@ build_container() {
     pct status $VMID | grep -q "running" || msg_error "Container failed to start"
     msg_ok "Container started"
 
+    # Wait for container to be fully ready
+    msg_info "Waiting for container initialization"
+    sleep 10
+
     # Get IP
-    sleep 3
     CONTAINER_IP=$(pct exec $VMID -- hostname -I | awk '{print $1}')
     [[ -z "$CONTAINER_IP" ]] && CONTAINER_IP="<pending>"
 
