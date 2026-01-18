@@ -230,15 +230,11 @@ description() {
     fi
 
     if [[ "$INSTALL_NGINX" == "true" ]]; then
-        echo -e "  Access:     ${BL}http://$CONTAINER_IP/${CL}"
-        echo ""
-        echo -e "  Direct:"
-        echo -e "    Full:     ${BL}http://$CONTAINER_IP:8081/live.html${CL}"
-        echo -e "    Read-only: ${BL}http://$CONTAINER_IP:8082/live.html${CL}"
+        echo -e "  Full Access: ${BL}http://$CONTAINER_IP/${CL}"
+        echo -e "  Read-Only:   ${BL}http://$CONTAINER_IP:8082/${CL}"
     else
-        echo -e "  Access:"
-        echo -e "    Full:     ${BL}http://$CONTAINER_IP:8081/live.html${CL}"
-        echo -e "    Read-only: ${BL}http://$CONTAINER_IP:8082/live.html${CL}"
+        echo -e "  Full Access: ${BL}http://$CONTAINER_IP:8081/live.html${CL}"
+        echo -e "  Read-Only:   ${BL}http://$CONTAINER_IP:8082/live.html${CL}"
     fi
 
     echo ""
