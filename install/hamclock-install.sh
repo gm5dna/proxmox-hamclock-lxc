@@ -227,7 +227,41 @@ else
 fi
 
 #=============================================================================
-# PHASE 8: Version Tracking
+# PHASE 8: Unattended Upgrades (Optional)
+#=============================================================================
+if [ "${UNATTENDED_UPDATES:-true}" = "true" ]; then
+  msg_info "Configuring Automatic Security Updates"
+
+  # Install unattended-upgrades package
+  $STD apt-get install -y unattended-upgrades apt-listchanges
+
+  # Configure unattended-upgrades
+  cat > /etc/apt/apt.conf.d/50unattended-upgrades << 'EOF'
+Unattended-Upgrade::Origins-Pattern {
+        "origin=Debian,codename=${distro_codename}-security";
+        "origin=Debian,codename=${distro_codename}-updates";
+};
+Unattended-Upgrade::AutoFixInterruptedDpkg "true";
+Unattended-Upgrade::MinimalSteps "true";
+Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+Unattended-Upgrade::Remove-Unused-Dependencies "true";
+Unattended-Upgrade::Automatic-Reboot "false";
+EOF
+
+  # Enable automatic updates
+  cat > /etc/apt/apt.conf.d/20auto-upgrades << 'EOF'
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+APT::Periodic::AutocleanInterval "7";
+EOF
+
+  msg_ok "Configured Automatic Security Updates"
+else
+  msg_info "Skipping automatic security updates"
+fi
+
+#=============================================================================
+# PHASE 9: Version Tracking
 #=============================================================================
 msg_info "Creating Version Information"
 
@@ -259,6 +293,13 @@ Service Management:
     Reload:  systemctl reload nginx
     Config:  /etc/nginx/sites-available/hamclock"
 
+if [ "${UNATTENDED_UPDATES:-true}" = "true" ]; then
+  VERSION_INFO="$VERSION_INFO
+  Security Updates:
+    Status:  Automatic updates enabled
+    Config:  /etc/apt/apt.conf.d/50unattended-upgrades"
+fi
+
 VERSION_INFO="$VERSION_INFO
 
 Documentation:
@@ -270,7 +311,7 @@ echo "$VERSION_INFO" > /opt/hamclock_version.txt
 msg_ok "Created Version Information at /opt/hamclock_version.txt"
 
 #=============================================================================
-# PHASE 9: Cleanup
+# PHASE 10: Cleanup
 #=============================================================================
 msg_info "Cleaning Up"
 cd /tmp
@@ -280,7 +321,7 @@ $STD apt-get autoclean
 msg_ok "Cleaned Up Temporary Files"
 
 #=============================================================================
-# PHASE 10: Finalization
+# PHASE 11: Finalization
 #=============================================================================
 motd_ssh
 customize
