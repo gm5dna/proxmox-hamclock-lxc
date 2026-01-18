@@ -20,6 +20,7 @@ HamClock is a comprehensive ham radio information display created by Elwood Down
 - **One-Command Installation**: Automated setup following community-scripts patterns
 - **Interactive Resolution Selection**: Choose from 4 display resolutions during installation
 - **Web-Based Interface**: Access from any device on your network
+- **Nginx Reverse Proxy** (optional): Simple URL access at `http://container-ip/` instead of `:8081/live.html`
 - **LXC Optimized**: Uses web-only builds for minimal resource usage
 - **Automatic Startup**: Systemd service with auto-restart on failure
 - **Comprehensive Documentation**: Built-in version tracking and usage information
@@ -87,8 +88,15 @@ Use arrow keys to select and press Enter.
 
 After installation completes, access the web interface:
 
+**With Nginx (default)**:
 ```
-http://<container-ip>:8081/live.html
+http://<container-ip>/
+```
+
+**Direct access** (without nginx or on specific ports):
+```
+http://<container-ip>:8081/live.html  (full access)
+http://<container-ip>:8082/live.html  (read-only)
 ```
 
 Replace `<container-ip>` with your container's IP address (shown at end of installation).
@@ -148,6 +156,24 @@ export HAMCLOCK_RESOLUTION="1600x960"
 ```
 
 This is useful for automated deployments.
+
+### Nginx Configuration
+
+By default, the installation includes nginx as a reverse proxy for simplified access. You can control this behavior:
+
+**Install without nginx**:
+```bash
+export INSTALL_NGINX=false
+./hamclock-install.sh
+```
+
+**What nginx provides**:
+- Access HamClock at `http://container-ip/` instead of `http://container-ip:8081/live.html`
+- Automatic redirect from root path to `/live.html`
+- Standard HTTP port (80) access
+- All HamClock features still accessible on ports 8081/8082
+
+**Nginx configuration location**: `/etc/nginx/sites-available/hamclock`
 
 ### Changing Resolution
 
