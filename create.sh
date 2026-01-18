@@ -134,6 +134,12 @@ variables() {
     else
         ROOT_PASSWORD=""
     fi
+
+    # Unattended updates
+    echo ""
+    read -p "Enable automatic security updates? (Y/n) [Y]: " ENABLE_UPDATES
+    ENABLE_UPDATES=$(echo "${ENABLE_UPDATES:-Y}" | xargs)
+    [[ "$ENABLE_UPDATES" =~ ^[Yy]$ ]] && UNATTENDED_UPDATES="true" || UNATTENDED_UPDATES="false"
 }
 
 # Build container
@@ -193,7 +199,7 @@ build_container() {
         msg_error "Failed to download installation script"
     fi
 
-    if ! pct exec $VMID -- bash -c "HAMCLOCK_RESOLUTION=$RESOLUTION DEBIAN_FRONTEND=noninteractive /tmp/hamclock-install.sh"; then
+    if ! pct exec $VMID -- bash -c "HAMCLOCK_RESOLUTION=$RESOLUTION UNATTENDED_UPDATES=$UNATTENDED_UPDATES DEBIAN_FRONTEND=noninteractive /tmp/hamclock-install.sh"; then
         msg_error "Installation failed - check logs: pct exec $VMID -- journalctl -xe"
     fi
 
