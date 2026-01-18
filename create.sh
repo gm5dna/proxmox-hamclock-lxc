@@ -5,275 +5,208 @@
 # License: MIT
 # https://github.com/GM5DNA/proxmox-hamclock-lxc
 
-# HamClock LXC Container Creation Script
-# Run this on your Proxmox host to create a HamClock LXC container
-
 set -e
 
-# Colors for output
-BLUE='\033[0;34m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+# Colors
+BL='\033[0;34m'
+GN='\033[0;32m'
+YW='\033[1;33m'
+RD='\033[0;31m'
+CL='\033[0m'
 
-msg_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
-msg_ok() { echo -e "${GREEN}[OK]${NC} $1"; }
-msg_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
-msg_error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+msg_info() { echo -e "${BL}[INFO]${CL} $1"; }
+msg_ok() { echo -e "${GN}[OK]${CL} $1"; }
+msg_error() { echo -e "${RD}[ERROR]${CL} $1"; exit 1; }
 
-# Default values
-VMID=""
-HOSTNAME="hamclock"
-MEMORY=512
-CORES=1
-STORAGE="4"
-BRIDGE="vmbr0"
-NETWORK_TYPE="dhcp"
-VLAN=""
-STATIC_IP=""
-GATEWAY=""
+# Default configuration
+APP="HamClock"
+var_cpu="1"
+var_ram="512"
+var_disk="4"
+var_os="debian"
+var_version="12"
+var_bridge="vmbr0"
 
-# Resolution options
-declare -A RESOLUTIONS=(
-    [1]="800x480"
-    [2]="1600x960"
-    [3]="2400x1440"
-    [4]="3200x1920"
-)
-
-# Function to find next available VMID
+# Get next available VMID
 get_next_vmid() {
-    local next_id=100
-    while pct status $next_id &>/dev/null; do
-        next_id=$((next_id + 1))
+    local id=100
+    while pct status $id &>/dev/null 2>&1; do
+        ((id++))
     done
-    echo $next_id
+    echo $id
 }
 
-# Welcome message
-clear
-echo "╔════════════════════════════════════════════════════════════════╗"
-echo "║         HamClock LXC Container Creation Script                ║"
-echo "║                                                                ║"
-echo "║  This script will create and configure a HamClock container   ║"
-echo "║  on your Proxmox VE host.                                     ║"
-echo "╚════════════════════════════════════════════════════════════════╝"
-echo ""
-
-# Get VMID
-if [ -z "$VMID" ]; then
-    suggested_vmid=$(get_next_vmid)
-    read -p "Enter container ID (VMID) [$suggested_vmid]: " input_vmid
-    input_vmid=$(echo "$input_vmid" | xargs)  # Strip whitespace
-    VMID=${input_vmid:-$suggested_vmid}
-fi
-
-# Check if VMID already exists
-if pct status $VMID &>/dev/null; then
-    msg_error "Container $VMID already exists!"
-fi
-
-# Get hostname
-read -p "Enter hostname [$HOSTNAME]: " input_hostname
-input_hostname=$(echo "$input_hostname" | xargs)  # Strip whitespace
-HOSTNAME=${input_hostname:-$HOSTNAME}
-
-# Get resolution
-echo ""
-echo "Select display resolution:"
-echo "  1) 800x480   - Small (compact displays)"
-echo "  2) 1600x960  - Recommended (default)"
-echo "  3) 2400x1440 - Large displays"
-echo "  4) 3200x1920 - Extra large (4K displays)"
-read -p "Enter choice [2]: " res_choice
-res_choice=${res_choice:-2}
-RESOLUTION=${RESOLUTIONS[$res_choice]:-"1600x960"}
-
-# Ask about nginx
-read -p "Install nginx reverse proxy? (Y/n) [Y]: " install_nginx
-install_nginx=${install_nginx:-Y}
-if [[ "$install_nginx" =~ ^[Yy]$ ]]; then
-    INSTALL_NGINX="true"
-else
-    INSTALL_NGINX="false"
-fi
-
-# Network configuration
-echo ""
-read -p "Use DHCP for networking? (Y/n) [Y]: " use_dhcp
-use_dhcp=${use_dhcp:-Y}
-
-if [[ ! "$use_dhcp" =~ ^[Yy]$ ]]; then
-    NETWORK_TYPE="static"
-    read -p "Enter static IP address (e.g., 192.168.1.10/24): " STATIC_IP
-    STATIC_IP=$(echo "$STATIC_IP" | xargs)  # Strip whitespace
-
-    # Validate CIDR notation
-    if [[ ! "$STATIC_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$ ]]; then
-        msg_error "Invalid IP format. Must include CIDR notation (e.g., 192.168.1.10/24)"
-    fi
-
-    read -p "Enter gateway (e.g., 192.168.1.1): " GATEWAY
-    GATEWAY=$(echo "$GATEWAY" | xargs)  # Strip whitespace
-
-    read -p "Enter VLAN tag (leave empty for none): " VLAN
-    VLAN=$(echo "$VLAN" | xargs)  # Strip whitespace
-fi
-
-# Advanced options
-echo ""
-read -p "Customize resources? (y/N) [N]: " customize_resources
-if [[ "$customize_resources" =~ ^[Yy]$ ]]; then
-    read -p "Memory (MB) [$MEMORY]: " input_memory
-    input_memory=$(echo "$input_memory" | xargs)  # Strip whitespace
-    MEMORY=${input_memory:-$MEMORY}
-
-    read -p "CPU cores [$CORES]: " input_cores
-    input_cores=$(echo "$input_cores" | xargs)  # Strip whitespace
-    CORES=${input_cores:-$CORES}
-
-    read -p "Storage (GB) [$STORAGE]: " input_storage
-    input_storage=$(echo "$input_storage" | xargs)  # Strip whitespace
-    STORAGE=${input_storage:-$STORAGE}
-fi
-
-# Summary
-echo ""
-echo "════════════════════════════════════════════════════════════════"
-echo "Configuration Summary:"
-echo "════════════════════════════════════════════════════════════════"
-echo "  VMID:       $VMID"
-echo "  Hostname:   $HOSTNAME"
-echo "  Resolution: $RESOLUTION"
-echo "  Nginx:      $INSTALL_NGINX"
-echo "  Memory:     ${MEMORY}MB"
-echo "  CPU Cores:  $CORES"
-echo "  Storage:    ${STORAGE}GB"
-echo "  Network:    $NETWORK_TYPE"
-if [ "$NETWORK_TYPE" = "static" ]; then
-    echo "  IP:         $STATIC_IP"
-    echo "  Gateway:    $GATEWAY"
-    [ -n "$VLAN" ] && echo "  VLAN:       $VLAN"
-fi
-echo "════════════════════════════════════════════════════════════════"
-echo ""
-read -p "Proceed with installation? (Y/n) [Y]: " proceed
-proceed=${proceed:-Y}
-if [[ ! "$proceed" =~ ^[Yy]$ ]]; then
-    msg_info "Installation cancelled"
-    exit 0
-fi
-
-# Download Debian template if needed
-msg_info "Checking for Debian 12 template"
-TEMPLATE="debian-12-standard_12.12-1_amd64.tar.zst"
-if ! pveam list local | grep -q "$TEMPLATE"; then
-    msg_info "Downloading Debian 12 template"
-    pveam download local $TEMPLATE || msg_error "Failed to download template"
-fi
-msg_ok "Template available"
-
-# Build network configuration
-NET_CONFIG="name=eth0,bridge=$BRIDGE"
-if [ "$NETWORK_TYPE" = "dhcp" ]; then
-    NET_CONFIG="$NET_CONFIG,ip=dhcp"
-else
-    NET_CONFIG="$NET_CONFIG,ip=$STATIC_IP,gw=$GATEWAY"
-fi
-[ -n "$VLAN" ] && NET_CONFIG="$NET_CONFIG,tag=$VLAN"
-
-# Create container
-msg_info "Creating LXC container $VMID"
-pct create $VMID local:vztmpl/$TEMPLATE \
-    --hostname $HOSTNAME \
-    --memory $MEMORY \
-    --cores $CORES \
-    --rootfs local-lvm:$STORAGE \
-    --net0 "$NET_CONFIG" \
-    --unprivileged 1 \
-    --nameserver 8.8.8.8 \
-    --features nesting=1 \
-    --onboot 1 \
-    --start 1 || msg_error "Failed to create container"
-
-msg_ok "Container created"
-
-# Wait for container to start
-msg_info "Waiting for container to start"
-sleep 5
-for i in {1..30}; do
-    if pct status $VMID | grep -q "running"; then
-        break
-    fi
-    sleep 1
-done
-
-if ! pct status $VMID | grep -q "running"; then
-    msg_error "Container failed to start"
-fi
-msg_ok "Container started"
-
-# Get container IP
-msg_info "Waiting for network configuration"
-sleep 3
-CONTAINER_IP=$(pct exec $VMID -- hostname -I | awk '{print $1}')
-if [ -z "$CONTAINER_IP" ]; then
-    CONTAINER_IP="<check container IP>"
-    msg_warn "Could not detect container IP automatically"
-else
-    msg_ok "Container IP: $CONTAINER_IP"
-fi
-
-# Download and run installation script
-msg_info "Installing HamClock (this may take 5-10 minutes)"
-
-# Download installation script into container
-if ! pct exec $VMID -- bash -c "curl -fsSL https://raw.githubusercontent.com/GM5DNA/proxmox-hamclock-lxc/main/install/hamclock-install.sh -o /tmp/hamclock-install.sh && chmod +x /tmp/hamclock-install.sh"; then
-    msg_error "Failed to download installation script"
-fi
-
-# Run installation in container
-if ! pct exec $VMID -- bash -c "HAMCLOCK_RESOLUTION=$RESOLUTION INSTALL_NGINX=$INSTALL_NGINX DEBIAN_FRONTEND=noninteractive /tmp/hamclock-install.sh"; then
-    msg_error "Installation failed - check container logs: pct exec $VMID -- journalctl -xe"
-fi
-
-msg_ok "HamClock installed successfully"
-
-# Get final container IP (in case it changed)
-CONTAINER_IP=$(pct exec $VMID -- hostname -I | awk '{print $1}')
-
-# Final message
-echo ""
-echo "╔════════════════════════════════════════════════════════════════╗"
-echo "║              Installation Complete!                            ║"
-echo "╚════════════════════════════════════════════════════════════════╝"
-echo ""
-echo "Container Details:"
-echo "  VMID:       $VMID"
-echo "  Hostname:   $HOSTNAME"
-echo "  IP Address: $CONTAINER_IP"
-echo "  Resolution: $RESOLUTION"
-echo ""
-if [ "$INSTALL_NGINX" = "true" ]; then
-    echo "Access HamClock:"
-    echo "  http://$CONTAINER_IP/"
+# Get user input
+header_info() {
+    clear
+    echo -e "${GN}
+ _   _                 ____ _            _
+| | | | __ _ _ __ ___ / ___| | ___   ___| | __
+| |_| |/ _\` | '_ \` _ \ |   | |/ _ \ / __| |/ /
+|  _  | (_| | | | | | | |___| | (_) | (__|   <
+|_| |_|\__,_|_| |_| |_|\____|_|\___/ \___|_|\_\\
+${CL}"
+    echo -e "${YW}HamClock LXC Container Setup${CL}"
     echo ""
-    echo "Direct access (optional):"
-    echo "  Full:      http://$CONTAINER_IP:8081/live.html"
-    echo "  Read-only: http://$CONTAINER_IP:8082/live.html"
-else
-    echo "Access HamClock:"
-    echo "  Full:      http://$CONTAINER_IP:8081/live.html"
-    echo "  Read-only: http://$CONTAINER_IP:8082/live.html"
-fi
-echo ""
-echo "Container Management:"
-echo "  Start:   pct start $VMID"
-echo "  Stop:    pct stop $VMID"
-echo "  Console: pct enter $VMID"
-echo ""
-echo "View installation details:"
-echo "  pct exec $VMID -- cat /opt/hamclock_version.txt"
-echo ""
-msg_ok "Enjoy HamClock! 73 de GM5DNA"
+}
+
+variables() {
+    # VMID
+    SUGGESTED_VMID=$(get_next_vmid)
+    read -p "Enter container ID (VMID) [$SUGGESTED_VMID]: " VMID
+    VMID=$(echo "${VMID:-$SUGGESTED_VMID}" | xargs)
+
+    # Check if exists
+    if pct status $VMID &>/dev/null; then
+        msg_error "Container $VMID already exists"
+    fi
+
+    # Hostname
+    read -p "Enter hostname [hamclock]: " HOSTNAME
+    HOSTNAME=$(echo "${HOSTNAME:-hamclock}" | xargs)
+
+    # Resolution
+    echo ""
+    echo "Select resolution:"
+    echo "  1) 800x480   - Small"
+    echo "  2) 1600x960  - Recommended (default)"
+    echo "  3) 2400x1440 - Large"
+    echo "  4) 3200x1920 - Extra large"
+    read -p "Choice [2]: " RES_CHOICE
+    RES_CHOICE=${RES_CHOICE:-2}
+
+    case $RES_CHOICE in
+        1) RESOLUTION="800x480" ;;
+        2) RESOLUTION="1600x960" ;;
+        3) RESOLUTION="2400x1440" ;;
+        4) RESOLUTION="3200x1920" ;;
+        *) RESOLUTION="1600x960" ;;
+    esac
+
+    # Nginx
+    echo ""
+    read -p "Install nginx reverse proxy? (Y/n) [Y]: " INSTALL_NGINX
+    INSTALL_NGINX=$(echo "${INSTALL_NGINX:-Y}" | xargs)
+    [[ "$INSTALL_NGINX" =~ ^[Yy]$ ]] && INSTALL_NGINX="true" || INSTALL_NGINX="false"
+
+    # Network
+    echo ""
+    read -p "Use DHCP? (Y/n) [Y]: " USE_DHCP
+    USE_DHCP=$(echo "${USE_DHCP:-Y}" | xargs)
+
+    if [[ ! "$USE_DHCP" =~ ^[Yy]$ ]]; then
+        read -p "Static IP (e.g., 192.168.1.10/24): " STATIC_IP
+        STATIC_IP=$(echo "$STATIC_IP" | xargs)
+
+        # Validate CIDR notation
+        if [[ ! "$STATIC_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$ ]]; then
+            msg_error "Invalid IP format. Must include CIDR notation (e.g., 192.168.1.10/24)"
+        fi
+
+        read -p "Gateway (e.g., 192.168.1.1): " GATEWAY
+        GATEWAY=$(echo "$GATEWAY" | xargs)
+
+        read -p "VLAN tag (optional): " VLAN
+        VLAN=$(echo "$VLAN" | xargs)
+
+        NET_CONFIG="name=eth0,bridge=$var_bridge,ip=$STATIC_IP,gw=$GATEWAY"
+        [[ -n "$VLAN" ]] && NET_CONFIG="$NET_CONFIG,tag=$VLAN"
+    else
+        NET_CONFIG="name=eth0,bridge=$var_bridge,ip=dhcp"
+    fi
+}
+
+# Build container
+build_container() {
+    TEMPLATE="debian-12-standard_12.12-1_amd64.tar.zst"
+
+    msg_info "Checking for Debian 12 template"
+    if ! pveam list local | grep -q "$TEMPLATE"; then
+        msg_info "Downloading Debian 12 template"
+        pveam download local $TEMPLATE || msg_error "Failed to download template"
+    fi
+    msg_ok "Template ready"
+
+    msg_info "Creating LXC container $VMID"
+    pct create $VMID local:vztmpl/$TEMPLATE \
+        --hostname $HOSTNAME \
+        --memory $var_ram \
+        --cores $var_cpu \
+        --rootfs local-lvm:$var_disk \
+        --net0 "$NET_CONFIG" \
+        --unprivileged 1 \
+        --nameserver 8.8.8.8 \
+        --features nesting=1 \
+        --onboot 1 \
+        --start 1 || msg_error "Failed to create container"
+    msg_ok "Container created"
+
+    # Wait for start
+    msg_info "Starting container"
+    sleep 5
+    for i in {1..30}; do
+        pct status $VMID | grep -q "running" && break
+        sleep 1
+    done
+    pct status $VMID | grep -q "running" || msg_error "Container failed to start"
+    msg_ok "Container started"
+
+    # Get IP
+    sleep 3
+    CONTAINER_IP=$(pct exec $VMID -- hostname -I | awk '{print $1}')
+    [[ -z "$CONTAINER_IP" ]] && CONTAINER_IP="<pending>"
+
+    # Install HamClock
+    msg_info "Installing HamClock (5-10 minutes)"
+
+    if ! pct exec $VMID -- bash -c "curl -fsSL https://raw.githubusercontent.com/GM5DNA/proxmox-hamclock-lxc/main/install/hamclock-install.sh -o /tmp/hamclock-install.sh && chmod +x /tmp/hamclock-install.sh"; then
+        msg_error "Failed to download installation script"
+    fi
+
+    if ! pct exec $VMID -- bash -c "HAMCLOCK_RESOLUTION=$RESOLUTION INSTALL_NGINX=$INSTALL_NGINX DEBIAN_FRONTEND=noninteractive /tmp/hamclock-install.sh"; then
+        msg_error "Installation failed - check logs: pct exec $VMID -- journalctl -xe"
+    fi
+
+    msg_ok "Installation complete"
+
+    # Get final IP
+    CONTAINER_IP=$(pct exec $VMID -- hostname -I | awk '{print $1}')
+}
+
+# Display completion message
+description() {
+    echo ""
+    echo -e "${GN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${CL}"
+    echo -e "${GN}  Installation Complete!${CL}"
+    echo -e "${GN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${CL}"
+    echo ""
+    echo -e "  VMID:       ${YW}$VMID${CL}"
+    echo -e "  Hostname:   ${YW}$HOSTNAME${CL}"
+    echo -e "  IP Address: ${YW}$CONTAINER_IP${CL}"
+    echo -e "  Resolution: ${YW}$RESOLUTION${CL}"
+    echo ""
+
+    if [[ "$INSTALL_NGINX" == "true" ]]; then
+        echo -e "  Access:     ${BL}http://$CONTAINER_IP/${CL}"
+        echo ""
+        echo -e "  Direct:"
+        echo -e "    Full:     ${BL}http://$CONTAINER_IP:8081/live.html${CL}"
+        echo -e "    Read-only: ${BL}http://$CONTAINER_IP:8082/live.html${CL}"
+    else
+        echo -e "  Access:"
+        echo -e "    Full:     ${BL}http://$CONTAINER_IP:8081/live.html${CL}"
+        echo -e "    Read-only: ${BL}http://$CONTAINER_IP:8082/live.html${CL}"
+    fi
+
+    echo ""
+    echo -e "${GN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${CL}"
+    echo ""
+}
+
+# Main execution
+header_info
+variables
+build_container
+description
+
+msg_ok "Setup complete! 73 de GM5DNA"
