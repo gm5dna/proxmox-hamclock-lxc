@@ -16,9 +16,9 @@ bash -c "$(wget -qLO - https://raw.githubusercontent.com/GM5DNA/proxmox-hamclock
 ```
 
 The script will guide you through:
-- Container configuration (VMID, hostname, resolution)
-- Network setup (DHCP or static IP)
-- Resource allocation (defaults: 512MB RAM, 1 CPU core, 4GB storage)
+- Container configuration
+- Network setup
+- Resource allocation
 
 Installation takes 5-10 minutes.
 
@@ -44,15 +44,6 @@ Choose during installation:
 - 2400x1440 - Large displays
 - 3200x1920 - 4K displays
 
-## Management
-
-```bash
-pct start <vmid>              # Start container
-pct stop <vmid>               # Stop container
-pct enter <vmid>              # Access console
-pct destroy <vmid>            # Remove container
-```
-
 ## About HamClock
 
 HamClock provides real-time ham radio information including propagation data, solar indices, world map with gray line, DX cluster spots, satellite tracking, and space weather alerts.
@@ -62,7 +53,6 @@ Official site: https://www.clearskyinstitute.com/ham/HamClock/
 
 ## Support
 
-- Issues: https://github.com/GM5DNA/proxmox-hamclock-lxc/issues
 - HamClock docs: https://www.clearskyinstitute.com/ham/HamClock/
 
 ---
