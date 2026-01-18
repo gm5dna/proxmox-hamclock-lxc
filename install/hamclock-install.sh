@@ -5,11 +5,37 @@
 # License: MIT
 # https://github.com/GM5DNA/proxmox-hamclock-lxc
 
-source $FUNCTIONS_FILE_PATH
-color
-verb_ip6
-catch_errors
-setting_up_container
+# Check if community-scripts functions are available
+if [ -n "$FUNCTIONS_FILE_PATH" ] && [ -f "$FUNCTIONS_FILE_PATH" ]; then
+    # Running via community-scripts - use their functions
+    source $FUNCTIONS_FILE_PATH
+    color
+    verb_ip6
+    catch_errors
+    setting_up_container
+else
+    # Standalone mode - define our own functions
+    color() { :; }
+    verb_ip6() { :; }
+    catch_errors() { set -e; }
+    setting_up_container() { :; }
+    motd_ssh() { :; }
+    customize() { :; }
+    cleanup_lxc() { :; }
+    msg_info() { echo -e "\033[0;34m[INFO]\033[0m $1"; }
+    msg_ok() { echo -e "\033[0;32m[OK]\033[0m $1"; }
+    msg_error() { echo -e "\033[0;31m[ERROR]\033[0m $1"; exit 1; }
+    network_check() {
+        if ! ping -c 1 8.8.8.8 &>/dev/null; then
+            msg_error "Network check failed - no internet connectivity"
+        fi
+    }
+    update_os() {
+        apt-get update
+        DEBIAN_FRONTEND=noninteractive apt-get -y upgrade
+    }
+    STD=""
+fi
 
 msg_info "Running Network Check"
 network_check
