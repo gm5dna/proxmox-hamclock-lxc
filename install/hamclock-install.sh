@@ -201,12 +201,7 @@ server {
     listen [::]:80 default_server;
     server_name _;
 
-    # Redirect root to live.html
-    location = / {
-        return 301 http://$host/live.html;
-    }
-
-    # Proxy all other requests to HamClock
+    # Proxy all requests to HamClock full access (port 8081)
     location / {
         proxy_pass http://127.0.0.1:8081;
         proxy_http_version 1.1;
@@ -257,9 +252,8 @@ Web Interface URLs:"
 
 if [ "${INSTALL_NGINX:-true}" = "true" ]; then
   VERSION_INFO="$VERSION_INFO
-  Primary:     http://$CONTAINER_IP/ (nginx proxy)
-  Full Access: http://$CONTAINER_IP:8081/live.html (direct)
-  Read-Only:   http://$CONTAINER_IP:8082/live.html (direct)"
+  Full Access: http://$CONTAINER_IP/ (nginx on port 80)
+  Read-Only:   http://$CONTAINER_IP:8082/"
 else
   VERSION_INFO="$VERSION_INFO
   Full Access: http://$CONTAINER_IP:8081/live.html

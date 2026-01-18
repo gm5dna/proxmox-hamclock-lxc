@@ -24,16 +24,11 @@ Installation takes 5-10 minutes.
 
 ## Access
 
-After installation, access HamClock at:
+After installation:
 
 ```
-http://<container-ip>/
-```
-
-Or directly:
-```
-http://<container-ip>:8081/live.html  (full access)
-http://<container-ip>:8082/live.html  (read-only)
+http://<container-ip>/       (full access)
+http://<container-ip>:8082/  (read-only)
 ```
 
 ## Resolution Options
