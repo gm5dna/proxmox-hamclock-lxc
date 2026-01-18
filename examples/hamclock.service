@@ -1,0 +1,29 @@
+# HamClock Systemd Service File
+# This file is automatically created during installation at:
+# /etc/systemd/system/hamclock.service
+#
+# This is a reference copy for documentation purposes.
+
+[Unit]
+Description=HamClock Ham Radio Information Display
+After=network-online.target
+Wants=network-online.target
+Documentation=https://www.clearskyinstitute.com/ham/HamClock/
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/hamclock
+Restart=on-failure
+RestartSec=5s
+User=root
+WorkingDirectory=/root
+
+# Security hardening (optional, uncomment to enable)
+# NoNewPrivileges=true
+# PrivateTmp=true
+# ProtectSystem=strict
+# ProtectHome=true
+# ReadWritePaths=/root/.hamclock
+
+[Install]
+WantedBy=multi-user.target

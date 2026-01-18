@@ -1,0 +1,25 @@
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+
+# Test files
+test/
+*.test
+
+# Build artifacts
+*.o
+*.so
+*.a
+
+# Local environment
+.env
+.env.local
