@@ -199,7 +199,12 @@ server {
     listen [::]:80 default_server;
     server_name _;
 
-    # Proxy all requests to HamClock full access (port 8081)
+    # Redirect root to live.html
+    location = / {
+        return 301 http://$host/live.html;
+    }
+
+    # Proxy all other requests to HamClock full access (port 8081)
     location / {
         proxy_pass http://127.0.0.1:8081;
         proxy_http_version 1.1;
