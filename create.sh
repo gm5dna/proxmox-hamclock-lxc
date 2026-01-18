@@ -159,7 +159,7 @@ build_container() {
     # Install HamClock
     msg_info "Installing HamClock (5-10 minutes)"
 
-    if ! pct exec $VMID -- bash -c "curl -fsSL https://raw.githubusercontent.com/GM5DNA/proxmox-hamclock-lxc/main/install/hamclock-install.sh -o /tmp/hamclock-install.sh && chmod +x /tmp/hamclock-install.sh"; then
+    if ! pct exec $VMID -- bash -c "wget -qO /tmp/hamclock-install.sh https://raw.githubusercontent.com/GM5DNA/proxmox-hamclock-lxc/main/install/hamclock-install.sh && chmod +x /tmp/hamclock-install.sh"; then
         msg_error "Failed to download installation script"
     fi
 
