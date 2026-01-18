@@ -83,12 +83,6 @@ variables() {
         *) RESOLUTION="1600x960" ;;
     esac
 
-    # Nginx
-    echo ""
-    read -p "Install nginx reverse proxy? (Y/n) [Y]: " INSTALL_NGINX
-    INSTALL_NGINX=$(echo "${INSTALL_NGINX:-Y}" | xargs)
-    [[ "$INSTALL_NGINX" =~ ^[Yy]$ ]] && INSTALL_NGINX="true" || INSTALL_NGINX="false"
-
     # Network
     echo ""
     read -p "Use DHCP? (Y/n) [Y]: " USE_DHCP
@@ -199,7 +193,7 @@ build_container() {
         msg_error "Failed to download installation script"
     fi
 
-    if ! pct exec $VMID -- bash -c "HAMCLOCK_RESOLUTION=$RESOLUTION INSTALL_NGINX=$INSTALL_NGINX DEBIAN_FRONTEND=noninteractive /tmp/hamclock-install.sh"; then
+    if ! pct exec $VMID -- bash -c "HAMCLOCK_RESOLUTION=$RESOLUTION DEBIAN_FRONTEND=noninteractive /tmp/hamclock-install.sh"; then
         msg_error "Installation failed - check logs: pct exec $VMID -- journalctl -xe"
     fi
 
@@ -229,13 +223,8 @@ description() {
         echo ""
     fi
 
-    if [[ "$INSTALL_NGINX" == "true" ]]; then
-        echo -e "  Full Access: ${BL}http://$CONTAINER_IP/${CL}"
-        echo -e "  Read-Only:   ${BL}http://$CONTAINER_IP:8082/${CL}"
-    else
-        echo -e "  Full Access: ${BL}http://$CONTAINER_IP:8081/live.html${CL}"
-        echo -e "  Read-Only:   ${BL}http://$CONTAINER_IP:8082/live.html${CL}"
-    fi
+    echo -e "  Full Access: ${BL}http://$CONTAINER_IP/${CL}"
+    echo -e "  Read-Only:   ${BL}http://$CONTAINER_IP:8082/${CL}"
 
     echo ""
     echo -e "${GN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${CL}"
