@@ -1,0 +1,4 @@
+# Allow www-data to start/stop hamclock service without password
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl start hamclock.service
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl stop hamclock.service
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl is-active hamclock.service

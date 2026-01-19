@@ -24,11 +24,23 @@ fi
 
 msg_info "Installing HamClock Auto-Start Feature"
 
-# Install fcgiwrap for CGI support
-msg_info "Installing fcgiwrap for CGI support"
+# Install required packages
+msg_info "Installing required packages (fcgiwrap, sudo)"
 apt-get update >/dev/null 2>&1
-apt-get install -y fcgiwrap >/dev/null 2>&1
-msg_ok "Installed fcgiwrap"
+apt-get install -y fcgiwrap sudo >/dev/null 2>&1
+msg_ok "Installed required packages"
+
+# Configure sudo for www-data
+msg_info "Configuring sudo permissions for www-data"
+mkdir -p /etc/sudoers.d
+cat > /etc/sudoers.d/hamclock-www << 'SUDOERS_EOF'
+# Allow www-data to start/stop hamclock service without password
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl start hamclock.service
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl stop hamclock.service
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl is-active hamclock.service
+SUDOERS_EOF
+chmod 440 /etc/sudoers.d/hamclock-www
+msg_ok "Configured sudo permissions"
 
 # Create CGI directory
 mkdir -p /usr/lib/cgi-bin
@@ -48,13 +60,13 @@ echo "Content-Type: application/json"
 echo ""
 
 # Check if service is already running
-if systemctl is-active --quiet hamclock.service; then
+if sudo systemctl is-active --quiet hamclock.service; then
     echo '{"status":"running","message":"HamClock is already running"}'
     exit 0
 fi
 
 # Start the service
-if systemctl start hamclock.service 2>&1; then
+if sudo systemctl start hamclock.service 2>&1; then
     echo '{"status":"starting","message":"HamClock service started successfully"}'
     logger -t hamclock-api "HamClock started via web interface"
     exit 0
@@ -155,14 +167,13 @@ cat > /var/www/hamclock/hamclock-starting.html << 'HTML_EOF'
             height: 100%;
             background: #4CAF50;
             border-radius: 3px;
-            animation: progress 15s ease-out forwards;
+            animation: progress 6s ease-out forwards;
         }
 
         @keyframes progress {
             0% { width: 0%; }
-            10% { width: 30%; }
-            50% { width: 60%; }
-            90% { width: 85%; }
+            20% { width: 40%; }
+            60% { width: 75%; }
             100% { width: 95%; }
         }
 
@@ -211,7 +222,7 @@ cat > /var/www/hamclock/hamclock-starting.html << 'HTML_EOF'
 
         <div class="info">
             <p>HamClock was stopped to save CPU resources when not in use.</p>
-            <p>The service takes approximately 10-15 seconds to start.</p>
+            <p>The service takes approximately 3-5 seconds to start.</p>
         </div>
 
         <div class="manual-link">
@@ -221,8 +232,8 @@ cat > /var/www/hamclock/hamclock-starting.html << 'HTML_EOF'
 
     <script>
         let attempts = 0;
-        const maxAttempts = 30;
-        const pollInterval = 1000; // 1 second
+        const maxAttempts = 40;
+        const pollInterval = 500; // 500ms for faster detection
 
         function updateStatus(message) {
             document.getElementById('status').textContent = message;
@@ -290,7 +301,7 @@ cat > /var/www/hamclock/hamclock-starting.html << 'HTML_EOF'
         // Start the process
         (async function() {
             await startHamClock();
-            setTimeout(pollHamClock, 2000); // Wait 2 seconds before first check
+            setTimeout(pollHamClock, 1000); // Wait 1 second before first check (service starts in 2-4s)
         })();
     </script>
 </body>
