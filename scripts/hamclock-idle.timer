@@ -1,0 +1,13 @@
+[Unit]
+Description=HamClock Idle Monitor Timer
+Documentation=https://github.com/GM5DNA/proxmox-hamclock-lxc
+Requires=hamclock.service
+
+[Timer]
+# Run every 10 seconds
+OnBootSec=10s
+OnUnitActiveSec=10s
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

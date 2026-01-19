@@ -284,7 +284,142 @@ else
 fi
 
 #=============================================================================
-# PHASE 8: Unattended Upgrades (Optional)
+# PHASE 8: Idle Monitoring (Optional)
+#=============================================================================
+# This feature automatically stops HamClock when no web connections are active
+# for a configurable period (default: 5 minutes), reducing CPU usage when idle.
+# The service can be manually started again when needed.
+
+if [ "${HAMCLOCK_IDLE_MONITORING:-true}" = "true" ]; then
+  msg_info "Installing Idle Monitoring"
+
+  # Install the idle check script
+  cat > /usr/local/bin/hamclock-idle-check.sh << 'IDLE_SCRIPT_EOF'
+#!/usr/bin/env bash
+
+# Copyright (c) 2025 GM5DNA
+# Author: GM5DNA
+# License: MIT
+# https://github.com/GM5DNA/proxmox-hamclock-lxc
+
+# HamClock Idle Monitor
+# Monitors active connections to HamClock and stops the service after idle timeout
+
+# Configuration
+IDLE_TIMEOUT=${HAMCLOCK_IDLE_TIMEOUT:-300}  # Default: 5 minutes (in seconds)
+TIMESTAMP_FILE="/tmp/hamclock-last-connection"
+SERVICE_NAME="hamclock.service"
+
+# Ports to monitor (HamClock web ports)
+FULL_ACCESS_PORT=18081
+READONLY_PORT=18082
+
+# Log function
+log() {
+    logger -t hamclock-idle "$1"
+}
+
+# Check if service is running
+if ! systemctl is-active --quiet "$SERVICE_NAME"; then
+    # Service not running, nothing to do
+    exit 0
+fi
+
+# Check for active connections on HamClock ports
+# Look for ESTABLISHED connections using ss
+CONNECTIONS=$(ss -tn state established "( sport = :${FULL_ACCESS_PORT} or sport = :${READONLY_PORT} )" | grep -c ESTAB)
+
+if [ "$CONNECTIONS" -gt 0 ]; then
+    # Active connections detected - update timestamp
+    date +%s > "$TIMESTAMP_FILE"
+    log "Active connections detected ($CONNECTIONS), updating timestamp"
+    exit 0
+fi
+
+# No active connections - check idle time
+if [ ! -f "$TIMESTAMP_FILE" ]; then
+    # First time with no connections - create timestamp
+    date +%s > "$TIMESTAMP_FILE"
+    log "No active connections, starting idle timer"
+    exit 0
+fi
+
+# Calculate idle time
+LAST_CONNECTION=$(cat "$TIMESTAMP_FILE")
+CURRENT_TIME=$(date +%s)
+IDLE_SECONDS=$((CURRENT_TIME - LAST_CONNECTION))
+
+if [ "$IDLE_SECONDS" -ge "$IDLE_TIMEOUT" ]; then
+    # Idle timeout exceeded - stop service
+    log "Idle timeout exceeded (${IDLE_SECONDS}s >= ${IDLE_TIMEOUT}s), stopping HamClock service"
+    systemctl stop "$SERVICE_NAME"
+
+    # Clean up timestamp file
+    rm -f "$TIMESTAMP_FILE"
+
+    log "HamClock service stopped due to inactivity"
+else
+    # Still within idle timeout
+    REMAINING=$((IDLE_TIMEOUT - IDLE_SECONDS))
+    log "Idle for ${IDLE_SECONDS}s, will stop in ${REMAINING}s if no connections"
+fi
+
+exit 0
+IDLE_SCRIPT_EOF
+
+  chmod +x /usr/local/bin/hamclock-idle-check.sh
+
+  # Create systemd service
+  cat > /etc/systemd/system/hamclock-idle.service << 'IDLE_SERVICE_EOF'
+[Unit]
+Description=HamClock Idle Monitor
+Documentation=https://github.com/GM5DNA/proxmox-hamclock-lxc
+After=hamclock.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/hamclock-idle-check.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+IDLE_SERVICE_EOF
+
+  # Create systemd timer
+  cat > /etc/systemd/system/hamclock-idle.timer << 'IDLE_TIMER_EOF'
+[Unit]
+Description=HamClock Idle Monitor Timer
+Documentation=https://github.com/GM5DNA/proxmox-hamclock-lxc
+
+[Timer]
+# Run every 10 seconds
+OnBootSec=10s
+OnUnitActiveSec=10s
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target
+IDLE_TIMER_EOF
+
+  # Enable and start the timer
+  $STD systemctl daemon-reload
+  $STD systemctl enable hamclock-idle.timer
+  $STD systemctl start hamclock-idle.timer
+
+  # Verify timer is active
+  if systemctl is-active --quiet hamclock-idle.timer; then
+    msg_ok "Installed Idle Monitoring (timeout: ${HAMCLOCK_IDLE_TIMEOUT:-300}s)"
+  else
+    msg_error "Failed to start idle monitoring timer"
+    exit 1
+  fi
+else
+  msg_info "Skipping idle monitoring"
+fi
+
+#=============================================================================
+# PHASE 9: Unattended Upgrades (Optional)
 #=============================================================================
 if [ "${UNATTENDED_UPDATES:-true}" = "true" ]; then
   msg_info "Configuring Automatic Security Updates"
@@ -318,7 +453,7 @@ else
 fi
 
 #=============================================================================
-# PHASE 9: Version Tracking
+# PHASE 10: Version Tracking
 #=============================================================================
 msg_info "Creating Version Information"
 
@@ -357,6 +492,15 @@ if [ "${UNATTENDED_UPDATES:-true}" = "true" ]; then
     Config:  /etc/apt/apt.conf.d/50unattended-upgrades"
 fi
 
+if [ "${HAMCLOCK_IDLE_MONITORING:-true}" = "true" ]; then
+  VERSION_INFO="$VERSION_INFO
+  Idle Monitoring:
+    Status:  Enabled (${HAMCLOCK_IDLE_TIMEOUT:-300}s timeout)
+    Timer:   systemctl status hamclock-idle.timer
+    Logs:    journalctl -u hamclock-idle -f
+    Config:  Set HAMCLOCK_IDLE_TIMEOUT environment variable"
+fi
+
 VERSION_INFO="$VERSION_INFO
 
 Documentation:
@@ -368,7 +512,7 @@ echo "$VERSION_INFO" > /opt/hamclock_version.txt
 msg_ok "Created Version Information at /opt/hamclock_version.txt"
 
 #=============================================================================
-# PHASE 10: Cleanup
+# PHASE 11: Cleanup
 #=============================================================================
 msg_info "Cleaning Up"
 cd /tmp
@@ -378,7 +522,7 @@ $STD apt-get autoclean
 msg_ok "Cleaned Up Temporary Files"
 
 #=============================================================================
-# PHASE 11: Finalization
+# PHASE 12: Finalization
 #=============================================================================
 motd_ssh
 customize
