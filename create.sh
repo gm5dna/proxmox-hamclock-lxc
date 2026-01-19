@@ -69,18 +69,18 @@ variables() {
     echo ""
     echo "Select resolution:"
     echo "  1) 800x480   - Small"
-    echo "  2) 1600x960  - Recommended (default)"
-    echo "  3) 2400x1440 - Large"
+    echo "  2) 1600x960  - Recommended"
+    echo "  3) 2400x1440 - Large (default)"
     echo "  4) 3200x1920 - Extra large"
-    read -p "Choice [2]: " RES_CHOICE
-    RES_CHOICE=${RES_CHOICE:-2}
+    read -p "Choice [3]: " RES_CHOICE
+    RES_CHOICE=${RES_CHOICE:-3}
 
     case $RES_CHOICE in
         1) RESOLUTION="800x480" ;;
         2) RESOLUTION="1600x960" ;;
         3) RESOLUTION="2400x1440" ;;
         4) RESOLUTION="3200x1920" ;;
-        *) RESOLUTION="1600x960" ;;
+        *) RESOLUTION="2400x1440" ;;
     esac
 
     # Network
