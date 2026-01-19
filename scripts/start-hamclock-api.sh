@@ -14,13 +14,13 @@ echo "Content-Type: application/json"
 echo ""
 
 # Check if service is already running
-if systemctl is-active --quiet hamclock.service; then
+if sudo systemctl is-active --quiet hamclock.service; then
     echo '{"status":"running","message":"HamClock is already running"}'
     exit 0
 fi
 
 # Start the service
-if systemctl start hamclock.service 2>&1; then
+if sudo systemctl start hamclock.service 2>&1; then
     echo '{"status":"starting","message":"HamClock service started successfully"}'
     logger -t hamclock-api "HamClock started via web interface"
     exit 0
