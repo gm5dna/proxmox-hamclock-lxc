@@ -36,7 +36,7 @@ http://<container-ip>:8082/  (read-only)
 Choose during installation:
 - 800x480 - Small displays
 - 1600x960 - Recommended
-- 2400x1440 - Large displays
+- 2400x1440 - Large displays (default)
 - 3200x1920 - 4K displays
 
 ## About HamClock
