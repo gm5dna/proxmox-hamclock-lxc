@@ -9,7 +9,9 @@ The idle monitoring feature automatically stops the HamClock service when no web
 1. **Connection Monitoring**: Every 10 seconds, the system checks for active TCP connections on HamClock's web ports (18081 and 18082)
 2. **Idle Tracking**: When no connections are detected, an idle timer starts counting
 3. **Automatic Shutdown**: After the idle timeout expires (default: 5 minutes), the HamClock service is automatically stopped
-4. **Manual Restart**: To view HamClock again, simply start the service: `systemctl start hamclock`
+4. **Automatic Restart**: When you access the web interface, it automatically starts HamClock and shows a friendly "Starting..." page (~3-5 seconds)
+
+**Result**: Seamless user experience with significant CPU savings when not in use.
 
 ## Architecture
 
@@ -106,11 +108,17 @@ journalctl -u hamclock-idle -f
 journalctl -u hamclock-idle -n 50
 ```
 
-### Manually Start HamClock
+### Starting HamClock After Idle Stop
 
+**Automatic (Recommended):**
+Simply visit the web interface - it will automatically start HamClock and redirect when ready (~3-5 seconds).
+
+**Manual:**
 ```bash
 systemctl start hamclock
 ```
+
+The automatic restart feature requires the auto-start components (installed by default). See the main README for details.
 
 ### Disable Idle Monitoring
 
@@ -270,15 +278,34 @@ The idle monitor tracks connections on HamClock's ports (18081/18082), which wor
 
 When a client connects via the proxy, the proxy maintains a connection to port 18081, which the idle monitor detects correctly.
 
+## Integration with Auto-Start Feature
+
+Idle monitoring works seamlessly with the auto-start feature (installed by default):
+
+**When HamClock is stopped** (due to idle timeout):
+1. User visits the web interface
+2. Custom "Starting..." page displays with animated progress
+3. API endpoint triggers `systemctl start hamclock` via CGI
+4. Page polls every 500ms checking for service readiness
+5. Auto-redirects to HamClock when ready (~3-5 seconds)
+
+**Result**: Users never see a 502 error and don't need to manually restart the service.
+
+**Technical Details**:
+- Auto-start uses fcgiwrap + sudo for permission management
+- CGI script at `/usr/lib/cgi-bin/start-hamclock.sh`
+- Sudoers configuration at `/etc/sudoers.d/hamclock-www`
+- Custom HTML page at `/var/www/hamclock/hamclock-starting.html`
+
 ## Future Enhancements
 
 Potential improvements being considered:
 
-1. **Auto-start on Connection**: Trigger HamClock start when nginx receives a request
-2. **Configurable Check Interval**: Make the 10-second interval user-configurable
-3. **Web Dashboard**: Show idle time and status via web interface
-4. **Multiple Timeouts**: Different timeouts for different times of day
-5. **Connection Count Threshold**: Only stop if connections drop below N for X minutes
+1. **Configurable Check Interval**: Make the 10-second interval user-configurable
+2. **Web Dashboard**: Show idle time and status via web interface
+3. **Multiple Timeouts**: Different timeouts for different times of day
+4. **Connection Count Threshold**: Only stop if connections drop below N for X minutes
+5. **Wake-on-LAN Integration**: Start HamClock from other services
 
 ## Contributing
 
