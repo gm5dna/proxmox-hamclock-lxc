@@ -194,6 +194,13 @@ $STD apt-get install -y nginx
 
 # Create nginx configuration
 cat > /etc/nginx/sites-available/hamclock << 'NGINX_EOF'
+# Map to determine the proper scheme (handle reverse proxy)
+map $http_x_forwarded_proto $redirect_scheme {
+    default $scheme;
+    https https;
+    http http;
+}
+
 # Full access on port 80
 server {
     listen 80 default_server;
@@ -202,7 +209,7 @@ server {
 
     # Redirect root to live.html (preserve scheme for HTTPS proxies)
     location = / {
-        return 301 $scheme://$host/live.html;
+        return 301 $redirect_scheme://$host/live.html;
     }
 
     # Proxy all other requests to HamClock full access (port 18081)
@@ -226,7 +233,7 @@ server {
 
     # Redirect root to live.html for read-only access (preserve scheme)
     location = / {
-        return 301 $scheme://$host:8082/live.html;
+        return 301 $redirect_scheme://$host:8082/live.html;
     }
 
     # Proxy all other requests to HamClock read-only (port 18082)
