@@ -1,0 +1,14 @@
+[Unit]
+Description=HamClock Idle Monitor
+Documentation=https://github.com/GM5DNA/proxmox-hamclock-lxc
+After=hamclock.service
+Requires=hamclock.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/hamclock-idle-check.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
