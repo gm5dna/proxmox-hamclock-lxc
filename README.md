@@ -39,6 +39,22 @@ Choose during installation:
 - 2400x1440 - Large displays (default)
 - 3200x1920 - 4K displays
 
+## Optional: Idle Monitoring
+
+HamClock includes automatic CPU-saving idle monitoring (enabled by default). When no one is viewing the interface for 5 minutes, the service automatically stops to save resources. It restarts automatically when you visit the page again.
+
+**Disable if not wanted:**
+```bash
+export HAMCLOCK_IDLE_MONITORING=false
+# Then run installation
+```
+
+**Manage on existing installation:**
+```bash
+systemctl stop hamclock-idle.timer    # Disable
+systemctl start hamclock-idle.timer   # Enable
+```
+
 ## About HamClock
 
 HamClock provides real-time ham radio information including propagation data, solar indices, world map with gray line, DX cluster spots, satellite tracking, and space weather alerts.
