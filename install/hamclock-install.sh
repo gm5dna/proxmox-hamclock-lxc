@@ -200,9 +200,9 @@ server {
     listen [::]:80 default_server;
     server_name _;
 
-    # Redirect root to live.html
+    # Redirect root to live.html (preserve scheme for HTTPS proxies)
     location = / {
-        return 301 http://$host/live.html;
+        return 301 $scheme://$host/live.html;
     }
 
     # Proxy all other requests to HamClock full access (port 18081)
@@ -224,9 +224,9 @@ server {
     listen [::]:8082 default_server;
     server_name _;
 
-    # Redirect root to live.html for read-only access
+    # Redirect root to live.html for read-only access (preserve scheme)
     location = / {
-        return 301 http://$host:8082/live.html;
+        return 301 $scheme://$host:8082/live.html;
     }
 
     # Proxy all other requests to HamClock read-only (port 18082)
