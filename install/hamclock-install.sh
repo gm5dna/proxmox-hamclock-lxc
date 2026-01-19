@@ -160,7 +160,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/hamclock
+ExecStart=/usr/local/bin/hamclock -w 18081 -r 18082
 Restart=on-failure
 RestartSec=5s
 User=root
@@ -194,6 +194,7 @@ $STD apt-get install -y nginx
 
 # Create nginx configuration
 cat > /etc/nginx/sites-available/hamclock << 'NGINX_EOF'
+# Full access on port 80
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
@@ -204,9 +205,33 @@ server {
         return 301 http://$host/live.html;
     }
 
-    # Proxy all other requests to HamClock full access (port 8081)
+    # Proxy all other requests to HamClock full access (port 18081)
     location / {
-        proxy_pass http://127.0.0.1:8081;
+        proxy_pass http://127.0.0.1:18081;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# Read-only access on port 8082
+server {
+    listen 8082 default_server;
+    listen [::]:8082 default_server;
+    server_name _;
+
+    # Redirect root to live.html for read-only access
+    location = / {
+        return 301 http://$host:8082/live.html;
+    }
+
+    # Proxy all other requests to HamClock read-only (port 18082)
+    location / {
+        proxy_pass http://127.0.0.1:18082;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
