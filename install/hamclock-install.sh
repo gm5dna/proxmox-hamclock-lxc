@@ -201,6 +201,12 @@ map $http_x_forwarded_proto $redirect_scheme {
     http http;
 }
 
+# Map for WebSocket upgrade handling
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+
 # Full access on port 80
 server {
     listen 80 default_server;
@@ -217,11 +223,12 @@ server {
         proxy_pass http://127.0.0.1:18081;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header Connection $connection_upgrade;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 86400;
     }
 }
 
@@ -241,11 +248,12 @@ server {
         proxy_pass http://127.0.0.1:18082;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header Connection $connection_upgrade;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 86400;
     }
 }
 NGINX_EOF
