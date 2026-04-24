@@ -369,7 +369,7 @@ fi
 exit 0
 IDLE_SCRIPT_EOF
 
-  chmod +x /usr/local/bin/hamclock-idle-check.sh
+  chmod 755 /usr/local/bin/hamclock-idle-check.sh
 
   # Create systemd service
   cat > /etc/systemd/system/hamclock-idle.service << 'IDLE_SERVICE_EOF'
