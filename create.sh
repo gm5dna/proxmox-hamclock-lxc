@@ -154,6 +154,10 @@ build_container() {
     msg_ok "Template ready"
 
     msg_info "Creating LXC container $VMID"
+    # Nameserver: overridable via CT_NAMESERVER env var (default 8.8.8.8).
+    # Needed on networks where outbound DNS is firewalled to a specific
+    # internal resolver (e.g. VLANs that only permit their own Pi-hole).
+    NAMESERVER="${CT_NAMESERVER:-8.8.8.8}"
     pct create $VMID local:vztmpl/$TEMPLATE \
         --hostname $HOSTNAME \
         --memory $var_ram \
@@ -161,7 +165,7 @@ build_container() {
         --rootfs local-lvm:$var_disk \
         --net0 "$NET_CONFIG" \
         --unprivileged 1 \
-        --nameserver 8.8.8.8 \
+        --nameserver "$NAMESERVER" \
         --features nesting=1 \
         --onboot 1 \
         --start 1 || msg_error "Failed to create container"
