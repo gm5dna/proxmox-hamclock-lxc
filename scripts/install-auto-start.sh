@@ -76,7 +76,7 @@ else
 fi
 CGI_EOF
 
-chmod +x /usr/lib/cgi-bin/start-hamclock.sh
+chmod 755 /usr/lib/cgi-bin/start-hamclock.sh
 msg_ok "Installed startup API script"
 
 # Create web directory for custom pages
