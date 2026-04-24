@@ -59,12 +59,13 @@ systemctl start hamclock-idle.timer   # Enable
 
 HamClock provides real-time ham radio information including propagation data, solar indices, world map with gray line, DX cluster spots, satellite tracking, and space weather alerts.
 
-Created by Elwood Downey (WB0OEW)
-Official site: https://www.clearskyinstitute.com/ham/HamClock/
+Created by Elwood Downey (WB0OEW). ClearSky froze upstream at v4.22; this installer now builds from the community fork at https://github.com/openhamclock/hamclock.
+Official site (historical): https://www.clearskyinstitute.com/ham/HamClock/
 
 ## Support
 
 - HamClock docs: https://www.clearskyinstitute.com/ham/HamClock/
+- Community fork (source): https://github.com/openhamclock/hamclock
 
 ---
 

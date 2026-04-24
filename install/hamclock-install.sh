@@ -55,7 +55,9 @@ $STD apt-get install -y \
   libx11-dev \
   linux-libc-dev \
   libssl-dev \
-  curl
+  curl \
+  git \
+  ca-certificates
 msg_ok "Installed Build Dependencies"
 
 #=============================================================================
@@ -98,23 +100,23 @@ msg_ok "Selected Resolution: $RESOLUTION (Target: $BUILD_TARGET)"
 #=============================================================================
 # PHASE 4: Download Source
 #=============================================================================
-msg_info "Downloading HamClock Source"
-DOWNLOAD_URL="https://www.clearskyinstitute.com/ham/HamClock/ESPHamClock.tgz"
+msg_info "Cloning HamClock Source"
+SOURCE_REPO="https://github.com/openhamclock/hamclock.git"
+SOURCE_REF="${HAMCLOCK_SOURCE_REF:-v4.23.0}"
+SOURCE_DIR="/tmp/hamclock-src"
 TEMP_DIR="/tmp/ESPHamClock"
 
 cd /tmp
-$STD curl -fsSL -o ESPHamClock.tgz "$DOWNLOAD_URL"
-if [ $? -ne 0 ]; then
-  msg_error "Failed to download HamClock source from $DOWNLOAD_URL"
+rm -rf "$SOURCE_DIR" "$TEMP_DIR"
+$STD git clone --branch "$SOURCE_REF" --depth 1 "$SOURCE_REPO" "$SOURCE_DIR"
+if [ $? -ne 0 ] || [ ! -d "$SOURCE_DIR/ESPHamClock" ]; then
+  msg_error "Failed to clone HamClock source from $SOURCE_REPO"
   exit 1
 fi
 
-$STD tar -xzf ESPHamClock.tgz
-if [ ! -d "$TEMP_DIR" ]; then
-  msg_error "Failed to extract HamClock source"
-  exit 1
-fi
-msg_ok "Downloaded and Extracted HamClock Source"
+mv "$SOURCE_DIR/ESPHamClock" "$TEMP_DIR"
+rm -rf "$SOURCE_DIR"
+msg_ok "Cloned HamClock Source from openhamclock ($SOURCE_REF)"
 
 #=============================================================================
 # PHASE 5: Compilation
@@ -505,7 +507,7 @@ VERSION_INFO="$VERSION_INFO
 
 Documentation:
   HamClock Site: https://www.clearskyinstitute.com/ham/HamClock/
-  Source Code:   https://www.clearskyinstitute.com/ham/HamClock/ESPHamClock.tgz"
+  Source Code:   https://github.com/openhamclock/hamclock (community fork)"
 
 echo "$VERSION_INFO" > /opt/hamclock_version.txt
 
@@ -516,7 +518,7 @@ msg_ok "Created Version Information at /opt/hamclock_version.txt"
 #=============================================================================
 msg_info "Cleaning Up"
 cd /tmp
-rm -rf ESPHamClock ESPHamClock.tgz
+rm -rf ESPHamClock hamclock-src
 $STD apt-get autoremove -y
 $STD apt-get autoclean
 msg_ok "Cleaned Up Temporary Files"
